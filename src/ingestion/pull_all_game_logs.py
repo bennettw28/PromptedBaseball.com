@@ -12,11 +12,6 @@ os.makedirs("data/raw/game_logs", exist_ok=True)
 for player_id in pitcher_ids:
     output_path = f"data/raw/game_logs/{player_id}.csv"
 
-    # skip pitchers already pulled, same resumable pattern as the backfill script
-    if os.path.exists(output_path):
-        print(f"already have {player_id}, skipping")
-        continue
-
     url = f"https://statsapi.mlb.com/api/v1/people/{player_id}/stats"
     params = {"stats": "gameLog", "group": "pitching", "season": 2026}
 

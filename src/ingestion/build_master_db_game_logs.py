@@ -4,7 +4,7 @@ import glob
 
 conn = sqlite3.connect("data/promptedbaseball.db")
 
-files = glob.glob("data/raw/game_logs/*.csv")
+files = sorted(glob.glob("data/raw/game_logs/*.csv"))
 
 for file in files:
     df = pd.read_csv(file)
