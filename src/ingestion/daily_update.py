@@ -40,11 +40,11 @@ for player_id in pitcher_ids:
     response = requests.get(url, params=params) #returns an object with json text
     data = response.json() #parses the json object into a python dict
 
-    if not data['stats'] or not data['stats'][0]['splits']:
+    if not data['stats'] or not data['stats'][0]['splits']: #this skips rows where no games are logged
         continue
 
     rows = []
-    for s in data['stats'][0]['splits']:
+    for s in data['stats'][0]['splits']: #stats is a list, 0 is the first item which is a dict and splits is the key value of that dict, #s is one games dictionary
         rows.append({
             "player_id": player_id,
             "date": s['date'],
@@ -58,10 +58,11 @@ for player_id in pitcher_ids:
         })
 
     df = pd.DataFrame(rows)
-    df.to_csv(f"data/raw/game_logs/{player_id}.csv", index=False)
-    df.to_sql("game_logs", conn, if_exists="append", index=False)
+    df.to_csv(f"data/raw/game_logs/{player_id}.csv", index=False) #creates file for data 
+    df.to_sql("game_logs", conn, if_exists="append", index=False) #game logs here is the table inside the db
 
 print("refreshed game logs for all pitchers")
+
 batter_ids = pd.read_sql("SELECT DISTINCT batter FROM pitches", conn)['batter'].tolist()
 conn.execute("DELETE FROM batter_game_logs")
 conn.commit()
