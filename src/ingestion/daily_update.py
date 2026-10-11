@@ -6,31 +6,39 @@ import requests
 
 DB_PATH = "data/promptedbaseball.db"
 
-# update pitch-level data for yesterday
+#11 sets target date as yesterday
+#12 organizes the date into a string format that can be remembered and referenced later.
 target_date = date.today() - timedelta(days=1)
 target_date_str = target_date.strftime('%Y-%m-%d')
 
+#16 sets the start and end date to yesterday so that it only pulls yesterdays data. statcast is a function of pybasebal that pulls pitch level data
+#17 turn the pitch data that was just pulled into a csv named according to its date
 pitch_data = statcast(start_dt=target_date_str, end_dt=target_date_str)
 pitch_data.to_csv(f"data/raw/pitches_per_day/statcast_{target_date_str}.csv", index=False)
 
+#20 opens the conenction to the db file allowing me to run sql functions
 conn = sqlite3.connect(DB_PATH)
 
-# delete first, in case this script runs more than once for the same day
+#25 runs through conn via conn.execute, this deletes every row where game_date matches yesterdays date in order to clean it up before re adding
+#26 adds the pitch data from the day to the sql file that has all of the pitched
+#27 saves everything done through conn since last comit
 conn.execute("DELETE FROM pitches WHERE game_date = ?", (target_date_str,))
 pitch_data.to_sql("pitches", conn, if_exists="append", index=False)
 conn.commit()
 print(f"updated pitches for {target_date_str}: {len(pitch_data)} rows")
 
-# fully rebuild game logs for every pitcher
+#32 gets the pitcher id of distinct pitchers and puts them in a list
+#33 wipes game logs
 pitcher_ids = pd.read_sql("SELECT DISTINCT pitcher FROM pitches", conn)['pitcher'].tolist()
 conn.execute("DELETE FROM game_logs")
 conn.commit()
 
+
 for player_id in pitcher_ids:
-    url = f"https://statsapi.mlb.com/api/v1/people/{player_id}/stats"
+    url = f"https://statsapi.mlb.com/api/v1/people/{player_id}/stats" 
     params = {"stats": "gameLog", "group": "pitching", "season": 2026}
-    response = requests.get(url, params=params)
-    data = response.json()
+    response = requests.get(url, params=params) #returns an object with json text
+    data = response.json() #parses the json object into a python dict
 
     if not data['stats'] or not data['stats'][0]['splits']:
         continue
