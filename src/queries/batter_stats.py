@@ -29,3 +29,8 @@ def get_last_x_games_by_id(player_id, x):
     ops = round(obp + slg, 3)
 
     return hits, at_bats, avg, ops, home_runs, actual_x
+
+if __name__ == "__main__":
+    hits, at_bats, avg, ops, home_runs, actual_x = get_last_x_games_by_id(514888, 10)
+    print(f"{hits} for {at_bats} ({avg}) with a {ops} OPS and {home_runs} home runs in his last {actual_x} games")
+# if name == "__main__": only runs this test if this file is the one being ran

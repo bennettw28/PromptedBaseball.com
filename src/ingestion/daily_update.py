@@ -53,5 +53,39 @@ for player_id in pitcher_ids:
     df.to_csv(f"data/raw/game_logs/{player_id}.csv", index=False)
     df.to_sql("game_logs", conn, if_exists="append", index=False)
 
-conn.close()
 print("refreshed game logs for all pitchers")
+batter_ids = pd.read_sql("SELECT DISTINCT batter FROM pitches", conn)['batter'].tolist()
+conn.execute("DELETE FROM batter_game_logs")
+conn.commit()
+
+for player_id in batter_ids:
+    url = f"https://statsapi.mlb.com/api/v1/people/{player_id}/stats"
+    params = {"stats": "gameLog", "group": "hitting", "season": 2026}
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    if not data['stats'] or not data['stats'][0]['splits']:
+        continue
+
+    rows = []
+    for s in data['stats'][0]['splits']:
+        rows.append({
+            "player_id": player_id,
+            "date": s['date'],
+            "opponent": s['opponent']['name'],
+            "hits": s['stat']['hits'],
+            "at_bats": s['stat']['atBats'],
+            "home_runs": s['stat']['homeRuns'],
+            "walks": s['stat']['baseOnBalls'],
+            "hit_by_pitch": s['stat']['hitByPitch'],
+            "sac_flies": s['stat']['sacFlies'],
+            "total_bases": s['stat']['totalBases'],
+        })
+
+    df = pd.DataFrame(rows)
+    df.to_csv(f"data/raw/batter_game_logs/{player_id}.csv", index=False)
+    df.to_sql("batter_game_logs", conn, if_exists="append", index=False)
+
+print("refreshed game logs for all batters")
+
+conn.close()
