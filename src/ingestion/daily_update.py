@@ -3,48 +3,45 @@ from datetime import date, timedelta
 import pandas as pd
 import sqlite3
 import requests
+import time
+
+def get_json(url, params):
+    for attempt in range(3):
+        try:
+            return requests.get(url, params=params, timeout=30).json()
+        except requests.exceptions.RequestException:
+            time.sleep(5)
+    return None
 
 DB_PATH = "data/promptedbaseball.db"
 
-#11 sets target date as yesterday
-#12 organizes the date into a string format that can be remembered and referenced later.
 target_date = date.today() - timedelta(days=1)
 target_date_str = target_date.strftime('%Y-%m-%d')
 
-#16 sets the start and end date to yesterday so that it only pulls yesterdays data. statcast is a function of pybasebal that pulls pitch level data
-#17 turn the pitch data that was just pulled into a csv named according to its date
 pitch_data = statcast(start_dt=target_date_str, end_dt=target_date_str)
 pitch_data.to_csv(f"data/raw/pitches_per_day/statcast_{target_date_str}.csv", index=False)
 
-#20 opens the conenction to the db file allowing me to run sql functions
 conn = sqlite3.connect(DB_PATH)
 
-#25 runs through conn via conn.execute, this deletes every row where game_date matches yesterdays date in order to clean it up before re adding
-#26 adds the pitch data from the day to the sql file that has all of the pitched
-#27 saves everything done through conn since last comit
 conn.execute("DELETE FROM pitches WHERE game_date = ?", (target_date_str,))
 pitch_data.to_sql("pitches", conn, if_exists="append", index=False)
 conn.commit()
 print(f"updated pitches for {target_date_str}: {len(pitch_data)} rows")
 
-#32 gets the pitcher id of distinct pitchers and puts them in a list
-#33 wipes game logs
 pitcher_ids = pd.read_sql("SELECT DISTINCT pitcher FROM pitches", conn)['pitcher'].tolist()
 conn.execute("DELETE FROM game_logs")
 conn.commit()
 
-
 for player_id in pitcher_ids:
-    url = f"https://statsapi.mlb.com/api/v1/people/{player_id}/stats" 
+    url = f"https://statsapi.mlb.com/api/v1/people/{player_id}/stats"
     params = {"stats": "gameLog", "group": "pitching", "season": 2026}
-    response = requests.get(url, params=params) #returns an object with json text
-    data = response.json() #parses the json object into a python dict
+    data = get_json(url, params)
 
-    if not data['stats'] or not data['stats'][0]['splits']: #this skips rows where no games are logged
+    if not data or not data['stats'] or not data['stats'][0]['splits']:
         continue
 
     rows = []
-    for s in data['stats'][0]['splits']: #stats is a list, 0 is the first item which is a dict and splits is the key value of that dict, #s is one games dictionary
+    for s in data['stats'][0]['splits']:
         rows.append({
             "player_id": player_id,
             "date": s['date'],
@@ -58,8 +55,8 @@ for player_id in pitcher_ids:
         })
 
     df = pd.DataFrame(rows)
-    df.to_csv(f"data/raw/game_logs/{player_id}.csv", index=False) #creates file for data 
-    df.to_sql("game_logs", conn, if_exists="append", index=False) #game logs here is the table inside the db
+    df.to_csv(f"data/raw/game_logs/{player_id}.csv", index=False)
+    df.to_sql("game_logs", conn, if_exists="append", index=False)
 
 print("refreshed game logs for all pitchers")
 
@@ -70,10 +67,9 @@ conn.commit()
 for player_id in batter_ids:
     url = f"https://statsapi.mlb.com/api/v1/people/{player_id}/stats"
     params = {"stats": "gameLog", "group": "hitting", "season": 2026}
-    response = requests.get(url, params=params)
-    data = response.json()
+    data = get_json(url, params)
 
-    if not data['stats'] or not data['stats'][0]['splits']:
+    if not data or not data['stats'] or not data['stats'][0]['splits']:
         continue
 
     rows = []
