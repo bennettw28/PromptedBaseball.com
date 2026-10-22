@@ -33,6 +33,11 @@ def get_last_x_games_by_id(player_id, x):
 #this code first gets all of the games from this player, then gets the number x most recent ones, 
 #uses this to calculate all the stats
 
+def add_latest_team(df):
+    df['team'] = df.apply(lambda r: r['away_team'] if r['inning_topbot'] == 'Top' else r['home_team'], axis=1)
+    df = df.sort_values('game_date').drop_duplicates('batter', keep='last')
+    return df
+
 def get_batter_list():
     conn = sqlite3.connect("data/promptedbaseball.db")
     df = pd.read_sql(
