@@ -38,6 +38,7 @@ def test_empty_table():
 
 def test_get_batter_list_with_fakes():
     fake_pitches = pd.DataFrame({
+        "batter": [1, 1],
         "game_date": ["2024-04-01", "2024-05-01"],
         "home_team": ["LAD", "NYY"],
         "away_team": ["SF", "BOS"],
