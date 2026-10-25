@@ -94,76 +94,105 @@ with tab1:
     player_type = st.radio("Player type", ["Pitcher", "Hitter"], horizontal=True)
 
     if player_type == "Pitcher":
-        selected_name = st.selectbox("Pitcher", sorted(pitchers['display_name']))
-        num_outings = st.number_input("Number of Outings", min_value=1, value=10)
+        result_box = st.container(border=True)
+        left, right = st.columns(2)
 
-        if st.button("Get stats"):
+        with left:
+            with st.container(border=True):
+                st.subheader("1. Who")
+                selected_name = st.selectbox("Pitcher", sorted(pitchers['display_name']), label_visibility="collapsed")
+
+        with right:
+            with st.container(border=True):
+                st.subheader("2. Window")
+                num_outings = st.number_input("Number of Outings", min_value=1, value=10)
+
+        with result_box:
+            st.caption("RESULT")
+            if st.button("Get stats", type="primary", key="pitcher_get_stats"):
                 player_id = pitchers[pitchers['display_name'] == selected_name]['pitcher'].iloc[0] # first it checks weather every row is equal to Logan Webb (SFG)
                 #Pitchers[] keeps only true rows, ['pitcher'] narrows it to just the player id, and iloc[0] unwraps it
                 wins, losses, era, actual_outings = get_last_x_outings_by_id(player_id, num_outings)
                 if actual_outings == 1:
-                    st.write(f"{selected_name} is {wins}-{losses} with a {era} ERA in his last outing.")
+                    st.markdown(f"### {selected_name} is {wins}-{losses} with a {era} ERA in his last outing.")
                 else:
-                    st.write(f"{selected_name} is {wins}-{losses} with a {era} ERA in his last {actual_outings} outings.")
+                    st.markdown(f"### {selected_name} is {wins}-{losses} with a {era} ERA in his last {actual_outings} outings.")
     else:
-        h1, h2, h3, h4 = st.columns([1.2, 3, 1.4, 3], vertical_alignment="center")
-        batter_side = h1.radio("Batter side", ["Hitter", "Hitting team"], label_visibility="collapsed")
-        if batter_side == "Hitter":
-            hitter_names = sorted(batters['display_name'])
-            default_index = hitter_names.index(DEFAULT_HITTER) if DEFAULT_HITTER in hitter_names else 0
-            selected_name = h2.selectbox("Hitter", hitter_names, index=default_index, label_visibility="collapsed")
-        else:
-            selected_name = h2.selectbox("Hitting team", sorted(batters['team'].unique()), label_visibility="collapsed")
-        pitcher_side = h3.radio("Pitcher side", ["Pitcher", "Pitching team"], label_visibility="collapsed")
-        if pitcher_side == "Pitcher":
-            opponent = h4.selectbox("Opposing pitcher", ["Any pitcher"] + sorted(pitchers['display_name']), label_visibility="collapsed")
-        else:
-            opponent = h4.selectbox("Opposing team", ["Any team"] + sorted(pitchers['team'].unique()), label_visibility="collapsed")
+        with st.container(border=True):
+            st.caption("RESULT")
+            st.markdown(f"### {HARDCODED_SENTENCE}")
+            st.caption("Sample sentence. The numbers are placeholders until the backend is built.")
+            st.button("Get stats", type="primary", key="hitter_get_stats")
 
-        st.markdown("**Stats**")
-        stat_cols = st.columns([1.4, 0.45] * len(st.session_state.stat_ids) + [1, 6], vertical_alignment="center")
-        for i, stat_id in enumerate(st.session_state.stat_ids):
-            stat_cols[2 * i].selectbox("Stat", HITTER_STATS, key=f"stat_{stat_id}", label_visibility="collapsed")
-            stat_cols[2 * i + 1].button("✕", key=f"remove_{stat_id}", on_click=remove_stat, args=(stat_id,))
-        stat_cols[-2].button("+ Add", on_click=add_stat)
+        row1_left, row1_right = st.columns(2)
+        row2_left, row2_right = st.columns(2)
 
-        w1, w2, w3, w4 = st.columns(4)
-        num_pa = w1.number_input("Last plate appearances", min_value=1, value=40)
-        outs = w2.selectbox("Outs", OUTS_OPTIONS, index=OUTS_OPTIONS.index("2 outs"))
-        inning = w3.selectbox("Inning", INNING_OPTIONS)
-        count = w4.selectbox("Count", COUNT_OPTIONS)
+        with row1_left:
+            with st.container(border=True):
+                st.subheader("1. Who")
+                batter_side = st.radio("Batter side", ["Hitter", "Hitting team"], horizontal=True, label_visibility="collapsed")
+                if batter_side == "Hitter":
+                    hitter_names = sorted(batters['display_name'])
+                    default_index = hitter_names.index(DEFAULT_HITTER) if DEFAULT_HITTER in hitter_names else 0
+                    selected_name = st.selectbox("Hitter", hitter_names, index=default_index, label_visibility="collapsed")
+                else:
+                    selected_name = st.selectbox("Hitting team", sorted(batters['team'].unique()), label_visibility="collapsed")
+                batter_hand = st.selectbox("Batter handedness", HANDS)
 
-        diamond_col, combo_col = st.columns([1.3, 4])
-        with diamond_col:
-            top = st.columns(3)
-            mid = st.columns(3)
-            bot = st.columns(3)
-            for col, base in ((top[1], "2B"), (mid[0], "3B"), (mid[2], "1B")):
-                col.button(
-                    BASE_NAMES[base],
-                    key=f"base_{base}",
-                    type="primary" if base in st.session_state.base_pending else "secondary",
-                    on_click=toggle_base,
-                    args=(base,),
-                    use_container_width=True
-                )
-            bot[1].button("Home", key="base_home", disabled=True, use_container_width=True)
-            st.button("Add combination", on_click=add_combo)
-        with combo_col:
-            st.write("Base situations")
-            combo_cols = st.columns(max(len(st.session_state.base_combos), 1))
-            for i, combo in enumerate(st.session_state.base_combos):
-                combo_cols[i].button(f"{combo_label(combo)} ✕", key=f"combo_{i}", on_click=remove_combo, args=(i,))
+        with row1_right:
+            with st.container(border=True):
+                st.subheader("2. What to show")
+                st.markdown("**Stats**")
+                stat_cols = st.columns([1.6, 0.6] * len(st.session_state.stat_ids) + [1.2, 1], vertical_alignment="center")
+                for i, stat_id in enumerate(st.session_state.stat_ids):
+                    stat_cols[2 * i].selectbox("Stat", HITTER_STATS, key=f"stat_{stat_id}", label_visibility="collapsed")
+                    stat_cols[2 * i + 1].button("✕", key=f"remove_{stat_id}", on_click=remove_stat, args=(stat_id,))
+                stat_cols[-2].button("+ Add", on_click=add_stat)
+                num_pa = st.number_input("Last plate appearances", min_value=1, value=40)
 
-        p1, p2, p3, p4, p5 = st.columns(5)
-        arm_slot = p1.selectbox("Pitcher arm slot", ARM_SLOTS, index=ARM_SLOTS.index("sidearm"))
-        pitch_mix = p2.selectbox("Pitcher pitch mix", PITCH_MIX, index=PITCH_MIX.index("sinker"))
-        pitcher_style = p3.selectbox("Pitcher style", PITCHER_STYLES, index=PITCHER_STYLES.index("ground ball"))
-        pitcher_hand = p4.selectbox("Pitcher handedness", HANDS, index=HANDS.index("right"))
-        batter_hand = p5.selectbox("Batter handedness", HANDS)
+        with row2_left:
+            with st.container(border=True):
+                st.subheader("3. Game situation")
+                s1, s2, s3 = st.columns(3)
+                outs = s1.selectbox("Outs", OUTS_OPTIONS, index=OUTS_OPTIONS.index("2 outs"))
+                inning = s2.selectbox("Inning", INNING_OPTIONS)
+                count = s3.selectbox("Count", COUNT_OPTIONS)
 
-        st.markdown("**Result**")
-        st.write(HARDCODED_SENTENCE)
+                st.markdown("**Runners on base**")
+                diamond_col, combo_col = st.columns([1.2, 1.5])
+                with diamond_col:
+                    top = st.columns(3)
+                    mid = st.columns(3)
+                    bot = st.columns(3)
+                    for col, base in ((top[1], "2B"), (mid[0], "3B"), (mid[2], "1B")):
+                        col.button(
+                            BASE_NAMES[base],
+                            key=f"base_{base}",
+                            type="primary" if base in st.session_state.base_pending else "secondary",
+                            on_click=toggle_base,
+                            args=(base,),
+                            use_container_width=True
+                        )
+                    bot[1].button("Home", key="base_home", disabled=True, use_container_width=True)
+                    st.button("Add combination", on_click=add_combo)
+                with combo_col:
+                    combo_cols = st.columns(2)
+                    for i, combo in enumerate(st.session_state.base_combos):
+                        combo_cols[i % 2].button(f"{combo_label(combo)} ✕", key=f"combo_{i}", on_click=remove_combo, args=(i,), use_container_width=True)
+
+        with row2_right:
+            with st.container(border=True):
+                st.subheader("4. Pitcher faced")
+                pitcher_side = st.radio("Pitcher side", ["Pitcher", "Pitching team"], horizontal=True, label_visibility="collapsed")
+                if pitcher_side == "Pitcher":
+                    opponent = st.selectbox("Opposing pitcher", ["Any pitcher"] + sorted(pitchers['display_name']), label_visibility="collapsed")
+                else:
+                    opponent = st.selectbox("Opposing team", ["Any team"] + sorted(pitchers['team'].unique()), label_visibility="collapsed")
+                q1, q2 = st.columns(2)
+                arm_slot = q1.selectbox("Arm slot", ARM_SLOTS, index=ARM_SLOTS.index("sidearm"))
+                pitch_mix = q2.selectbox("Pitch mix", PITCH_MIX, index=PITCH_MIX.index("sinker"))
+                pitcher_style = q1.selectbox("Style", PITCHER_STYLES, index=PITCHER_STYLES.index("ground ball"))
+                pitcher_hand = q2.selectbox("Pitcher handedness", HANDS, index=HANDS.index("right"))
 
 with tab2:
     st.header("Coming Soon")
