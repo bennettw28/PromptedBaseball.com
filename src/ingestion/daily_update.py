@@ -29,12 +29,12 @@ conn.commit()
 print(f"updated pitches for {target_date_str}: {len(pitch_data)} rows")
 
 pitcher_ids = pd.read_sql("SELECT DISTINCT pitcher FROM pitches", conn)['pitcher'].tolist()
-conn.execute("DELETE FROM game_logs")
+conn.execute("DROP TABLE IF EXISTS game_logs")
 conn.commit()
 
 for player_id in pitcher_ids:
     url = f"https://statsapi.mlb.com/api/v1/people/{player_id}/stats"
-    params = {"stats": "gameLog", "group": "pitching", "season": 2026}
+    params = {"stats": "gameLog", "group": "pitching", "season": 2026, "gameType": "R,F,D,L,W"}
     data = get_json(url, params)
 
     if not data or not data['stats'] or not data['stats'][0]['splits']:
@@ -52,6 +52,8 @@ for player_id in pitcher_ids:
             "era": s['stat']['era'],
             "innings_pitched": s['stat']['inningsPitched'],
             "earned_runs": s['stat']['earnedRuns'],
+            "game_pk": s['game']['gamePk'],
+            "game_type": s['gameType'],
         })
 
     df = pd.DataFrame(rows)
@@ -61,12 +63,12 @@ for player_id in pitcher_ids:
 print("refreshed game logs for all pitchers")
 
 batter_ids = pd.read_sql("SELECT DISTINCT batter FROM pitches", conn)['batter'].tolist()
-conn.execute("DELETE FROM batter_game_logs")
+conn.execute("DROP TABLE IF EXISTS batter_game_logs")
 conn.commit()
 
 for player_id in batter_ids:
     url = f"https://statsapi.mlb.com/api/v1/people/{player_id}/stats"
-    params = {"stats": "gameLog", "group": "hitting", "season": 2026}
+    params = {"stats": "gameLog", "group": "hitting", "season": 2026, "gameType": "R,F,D,L,W"}
     data = get_json(url, params)
 
     if not data or not data['stats'] or not data['stats'][0]['splits']:
@@ -85,6 +87,8 @@ for player_id in batter_ids:
             "hit_by_pitch": s['stat']['hitByPitch'],
             "sac_flies": s['stat']['sacFlies'],
             "total_bases": s['stat']['totalBases'],
+            "game_pk": s['game']['gamePk'],
+            "game_type": s['gameType'],
         })
 
     df = pd.DataFrame(rows)
