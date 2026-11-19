@@ -28,4 +28,4 @@ usage = usage.reset_index() #turns pitcher_id from row name to just a regular co
 usage.to_sql("pitcher_profiles", conn, if_exists="replace", index=False)
 conn.close()
 
-print(f"built pitcher_profiles: {len(usage)} rows")Bu
+print(f"built pitcher_profiles: {len(usage)} rows")
