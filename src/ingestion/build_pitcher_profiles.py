@@ -23,6 +23,23 @@ role["start_pct"] = role["starts"] / role["games"]
 role["role"] = role["start_pct"].apply(lambda p: "starter" if p >= 0.5 else "reliever")
 
 usage = usage.join(role)
+
+main_pitches = ["FF", "SI", "FC", "SL", "ST", "CU", "KC", "CH", "FS"]
+
+for pitch in main_pitches:
+    usage["leans_" + pitch] = 0
+
+cutoff_rows = []
+for r in ["starter", "reliever"]:
+    in_pool = (usage["role"] == r) & (usage["pitches_thrown"] >= 200)
+    for pitch in main_pitches:
+        col = "usage_" + pitch
+        cutoff = usage[in_pool & (usage[col] > 0)][col].quantile(0.8)
+        cutoff_rows.append({"role": r, "pitch": pitch, "cutoff": cutoff})
+        usage.loc[in_pool & (usage[col] >= cutoff), "leans_" + pitch] = 1 #row before the comma, column after
+
+pd.DataFrame(cutoff_rows).to_sql("pitch_cutoffs", conn, if_exists="replace", index=False)
+
 usage = usage.reset_index() #turns pitcher_id from row name to just a regular column(numbers rows)
 
 usage.to_sql("pitcher_profiles", conn, if_exists="replace", index=False)
